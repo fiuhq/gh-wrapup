@@ -17,8 +17,10 @@ Creating an issue and a linked PR requires two separate commands with manual URL
 
 ## The Solution
 
+One command. Four modes. No duplicates.
+
 ```bash
-gh wrapup create \
+gh wrapup upsert \
   --title "Sidebar nav doesn't collapse on mobile" \
   --labels "bug,frontend" \
   --pr-title "fix(nav): collapse sidebar on mobile viewports" \
@@ -27,7 +29,7 @@ gh wrapup create \
 
 ```
 ✓ Issue #42 created: https://github.com/org/repo/issues/42
-✓ Branch 42-fix-sidebar-nav created
+✓ Branch fix/sidebar-mobile created
 ✓ PR #43 created: https://github.com/org/repo/pull/43
   └─ Closes #42
 ```
@@ -46,33 +48,46 @@ Requires [gh CLI](https://cli.github.com) 2.0+.
 
 ## Commands
 
-### `gh wrapup create`
+### `gh wrapup upsert`
 
-Create a GitHub issue and a linked PR in a single command.
+Idempotent create-or-update. The single command for all issue + PR workflows.
+
+Operates in four modes depending on which flags are provided:
+
+| Mode | Flags | Behavior |
+|------|-------|----------|
+| **1** (default) | `--title` | Search-or-create issue, create-or-update branch + PR |
+| **2** (existing issue) | `--issue N` | Fetch issue N, create branch + PR with `Closes #N` |
+| **3** (existing PR) | `--title` + `--pr N` | Create issue, prepend `Closes #N` to existing PR body |
+| **4** (link both) | `--issue N` + `--pr M` | Prepend `Closes #N` to existing PR body. No branch created. |
+
+#### Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--title` | _(required)_ | Issue title |
+| `--title` | — | Issue title (required unless `--issue` is set) |
 | `--body` | `""` | Issue body |
 | `--body-file` | — | Read issue body from file (`-` for stdin) |
-| `--labels` | — | Comma-separated labels to apply to the issue |
-| `--pr-title` | _(required)_ | PR title |
-| `--pr-body` | `""` | PR body (auto-prepended with `Closes #N`) |
+| `--labels` | — | Comma-separated labels for the issue |
+| `--assignee` | — | Issue assignee (GitHub username) |
+| `--milestone` | — | Milestone name or number |
+| `--issue` | — | Use existing issue number instead of creating one |
+| `--pr-title` | issue title | PR title |
+| `--pr-body` | `""` | Additional PR body text |
 | `--branch` | auto | Branch name (default: `{number}-{slugified-title}`) |
-| `--base` | `main` | Base branch for the PR |
-| `--draft` | `false` | Open PR as draft |
-| `--repo` | current repo | Target repo (`owner/repo`) |
+| `--base` | repo default | Base branch for the PR |
+| `--draft` | `false` | Create PR as draft |
+| `--pr` | — | Use existing PR number instead of creating one |
+| `--repo` | current repo | Target repository (`owner/repo`) |
+| `--issue-search` | — | Custom search query to find existing issue |
+| `--json` | `false` | Output result as JSON |
 
-**Minimal:**
+#### Examples
+
+**Mode 1 — Full atomic (issue + branch + PR):**
 
 ```bash
-gh wrapup create --title "Fix login timeout" --pr-title "fix(auth): increase session TTL"
-```
-
-**Full:**
-
-```bash
-gh wrapup create \
+gh wrapup upsert \
   --title "API rate limiter drops valid requests under load" \
   --body-file ./issue-body.md \
   --labels "bug,backend,p1" \
@@ -83,64 +98,72 @@ gh wrapup create \
   --repo myorg/myapi
 ```
 
----
-
-### `gh wrapup upsert`
-
-Idempotent create-or-update. The killer feature for automated workflows.
-
-- Searches for an existing open issue with the same title
-- If found: updates it, reuses the issue number
-- If a branch with the given name already exists: reuses it, creates or updates the PR
-- Safe to call repeatedly — never creates duplicates
+**Mode 2 — From existing issue:**
 
 ```bash
-gh wrapup upsert \
-  --title "Sidebar nav doesn't collapse on mobile" \
-  --pr-title "fix(nav): collapse sidebar on mobile viewports" \
-  --branch "fix/sidebar-mobile"
+gh wrapup upsert --issue 42 --pr-title "fix(nav): collapse sidebar on mobile viewports"
 ```
 
-Same command, called again after a crash:
-
 ```
-~ Issue #42 already exists, skipping creation
-~ Branch fix/sidebar-mobile already exists, skipping creation
-~ PR #43 already exists, updating description
-✓ Done: https://github.com/org/repo/pull/43
+~ Found issue #42: Sidebar nav doesn't collapse on mobile
+✓ Branch 42-sidebar-nav-doesnt-collapse created
+✓ PR #43 created: https://github.com/org/repo/pull/43
+  └─ Closes #42
 ```
 
-Accepts all the same flags as `create`.
-
----
-
-### `gh wrapup from-issue`
-
-Create a PR from an issue that already exists.
+**Mode 3 — Create issue, link to existing PR:**
 
 ```bash
-gh wrapup from-issue \
-  --issue 42 \
-  --pr-title "fix(nav): collapse sidebar on mobile viewports" \
-  --branch "fix/sidebar-mobile"
+gh wrapup upsert --title "Sidebar nav doesn't collapse on mobile" --pr 43
 ```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--issue` | _(required)_ | Existing issue number |
-| `--pr-title` | _(required)_ | PR title |
-| `--branch` | auto | Branch name |
-| `--base` | `main` | Base branch |
-| `--draft` | `false` | Open PR as draft |
-| `--repo` | current repo | Target repo (`owner/repo`) |
+```
+✓ Issue #42 created: https://github.com/org/repo/issues/42
+✓ PR #43 updated: https://github.com/org/repo/pull/43
+  └─ Closes #42
+```
+
+**Mode 4 — Link both existing:**
+
+```bash
+gh wrapup upsert --issue 42 --pr 43
+```
+
+```
+~ Found issue #42: Sidebar nav doesn't collapse on mobile
+~ PR #43 already linked to issue #42
+  └─ Closes #42
+```
+
+#### JSON output
+
+Pass `--json` to get structured output for scripting or agent workflows:
+
+```bash
+gh wrapup upsert --title "Fix login timeout" --pr-title "fix(auth): increase session TTL" --json
+```
+
+```json
+{
+  "issue": {
+    "number": 42,
+    "url": "https://github.com/org/repo/issues/42"
+  },
+  "pr": {
+    "number": 43,
+    "url": "https://github.com/org/repo/pull/43"
+  },
+  "created": true
+}
+```
 
 ---
 
 ## Why `upsert` matters for agentic development
 
-AI coding agents (Claude Code, Codex, Devin, SWE-agent) operate in retry loops. A task fails, the agent retries from the beginning. With `create`, every retry produces a new issue and a new PR — polluting the repo with duplicates that require manual cleanup.
+AI coding agents operate in retry loops. A task fails, the agent retries from the beginning. With a bare `create`, every retry produces a new issue and a new PR — polluting the repo with duplicates that require manual cleanup. And in retroactive linking scenarios (agent already pushed code before formalizing the issue), you needed two separate commands.
 
-`upsert` makes the entire workflow idempotent:
+`upsert` handles all four scenarios from a single call:
 
 ```
 Agent receives task
@@ -152,6 +175,14 @@ Agent crashes on the next step and retries
   → writes code again
   → gh wrapup upsert --title "..." --pr-title "..."
   → Done: PR #43  ← same PR, no duplicate
+
+Agent pushed code first, needs to formalize after
+  → gh wrapup upsert --title "..." --pr 43
+  → Issue #42 created, PR #43 updated with Closes #42
+
+Agent recovers from crash mid-linking
+  → gh wrapup upsert --issue 42 --pr 43
+  → PR #43 updated with Closes #42
 ```
 
 The issue title is the natural idempotency key. The branch name is the PR idempotency key. No state file, no external lock, no coordination needed.
@@ -162,17 +193,18 @@ The issue title is the natural idempotency key. The branch name is the PR idempo
 
 | Without gh-wrapup | With gh-wrapup |
 |---|---|
-| `gh issue create` → parse URL → extract number → `gh pr create --body "Closes #N"` | `gh wrapup create --title "..."` |
-| 3 commands, manual linking | 1 command, automatic linking |
-| Not retry-safe | `upsert` is fully idempotent |
-| Agents must parse issue URLs | Structured output, zero parsing |
+| `gh issue create` → parse URL → `gh pr create --body "Closes #N"` | `gh wrapup upsert --title "..."` |
+| 2–3 commands, manual linking | 1 command, automatic linking |
+| Not retry-safe | Fully idempotent in all 4 modes |
+| Agents must parse issue URLs | `--json` flag, zero parsing |
 | Duplicates on retry | No duplicates, ever |
+| Separate commands for each scenario | Single command handles all scenarios |
 
 ---
 
 ## How it works
 
-1. Creates the GitHub issue via REST API, captures the issue number
+1. Resolves or creates a GitHub issue via REST API, capturing the issue number
 2. Creates a branch from the base branch HEAD (or reuses an existing branch)
 3. Creates a PR with `Closes #N` in the body, linking it to the issue
 4. When the PR merges, GitHub automatically closes the issue
@@ -185,7 +217,7 @@ No webhooks, no background jobs, no state stored outside GitHub.
 
 Zero configuration required. `gh-wrapup` inherits the token from `gh auth`. It works with any repository you have push access to.
 
-- Cross-repo: pass `--repo owner/repo` to any command
+- Cross-repo: pass `--repo owner/repo`
 - Draft PRs: pass `--draft`
 - Pipe body from stdin: `--body-file -`
 - CI/automation: set `GH_TOKEN` environment variable as you would for `gh`
