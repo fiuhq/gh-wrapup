@@ -7,7 +7,7 @@ Atomically create a GitHub issue + PR as a single unit of work.
 [![Go Version](https://img.shields.io/badge/go-1.21%2B-blue)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![gh extension](https://img.shields.io/badge/gh-extension-8250df)](https://cli.github.com/manual/gh_extension)
-[![Release](https://img.shields.io/github/v/release/pdinh/gh-wrapup)](https://github.com/pdinh/gh-wrapup/releases)
+[![Release](https://img.shields.io/github/v/release/fiuhq/gh-wrapup)](https://github.com/fiuhq/gh-wrapup/releases)
 
 ---
 
@@ -37,7 +37,7 @@ gh wrapup create \
 ## Install
 
 ```bash
-gh ext install pdinh/gh-wrapup
+gh ext install fiuhq/gh-wrapup
 ```
 
 Requires [gh CLI](https://cli.github.com) 2.0+.
@@ -195,7 +195,7 @@ Zero configuration required. `gh-wrapup` inherits the token from `gh auth`. It w
 ## Contributing
 
 ```bash
-git clone https://github.com/pdinh/gh-wrapup
+git clone https://github.com/fiuhq/gh-wrapup
 cd gh-wrapup
 go build -o gh-wrapup .
 go vet ./...
