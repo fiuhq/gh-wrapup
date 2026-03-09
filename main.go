@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/pdinh/gh-wrapup/cmd"
+	"github.com/fiuhq/gh-wrapup/cmd"
 )
 
 func main() {

@@ -136,6 +136,16 @@ func (c *Client) GetPRForBranch(owner, repo, headOwner, branch string) (*PRRespo
 	return &results[0], nil
 }
 
+// GetPR fetches a single pull request by number.
+func (c *Client) GetPR(owner, repo string, number int) (*PRResponse, error) {
+	var result PRResponse
+	path := fmt.Sprintf("repos/%s/%s/pulls/%d", owner, repo, number)
+	if err := c.rest.Get(path, &result); err != nil {
+		return nil, fmt.Errorf("GET %s: %w", path, err)
+	}
+	return &result, nil
+}
+
 // UpdatePR patches an existing pull request.
 func (c *Client) UpdatePR(owner, repo string, number int, req *PRUpdateRequest) (*PRResponse, error) {
 	var result PRResponse
