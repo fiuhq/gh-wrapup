@@ -23,7 +23,5 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.AddCommand(createCmd)
 	rootCmd.AddCommand(upsertCmd)
-	rootCmd.AddCommand(fromIssueCmd)
 }

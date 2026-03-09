@@ -1,4 +1,4 @@
-module github.com/pdinh/gh-wrapup
+module github.com/fiuhq/gh-wrapup
 
 go 1.23
 
